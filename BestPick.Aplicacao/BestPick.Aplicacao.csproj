@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\BestPick.Dominio\BestPick.Dominio.csproj" />
+    <ProjectReference Include="..\BestPick.Repositorio\BestPick.Repositorio.csproj" />
+    <ProjectReference Include="..\BestPick.Servico\BestPick.Servico.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>
