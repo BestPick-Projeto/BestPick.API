@@ -2,7 +2,7 @@ using BestPick.Dominio.Entidades;
 
 namespace BestPick.Repositorio.Interfaces;
 
-public interface IHistoricoBusca
+public interface IHistoricoRepositorio
 {
     Task<HistoricoBusca> AdicionarAsync(HistoricoBusca historicoBusca);
     Task<IEnumerable<HistoricoBusca>> ListarPorUsuarioAsync(int usuarioid);

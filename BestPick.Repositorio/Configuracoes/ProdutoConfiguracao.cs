@@ -16,6 +16,7 @@ public class ProdutoConfiguracao : IEntityTypeConfiguration<Produto>
         builder.Property(nameof(Produto.Preco)).HasColumnName("Preco");
         builder.Property(nameof(Produto.Url)).HasColumnName("Url");
         builder.Property(nameof(Produto.Categoria)).HasColumnName("Categoria");
+        builder.Property(nameof(Produto.HistoricoBuscaId)).HasColumnName("HistoricoBuscaId");
 
         builder.Property(x => x.Beneficios)
            .HasColumnName("Beneficios")
@@ -30,6 +31,12 @@ public class ProdutoConfiguracao : IEntityTypeConfiguration<Produto>
                 lista => string.Join(';', lista),
                 texto => texto.Split(';', StringSplitOptions.RemoveEmptyEntries).ToList()
                 );
+
+        builder.HasOne(x => x.HistoricoBusca)
+       .WithMany()
+       .HasForeignKey(x => x.HistoricoBuscaId)
+       .IsRequired()
+       .OnDelete(DeleteBehavior.Cascade);
 
     }
 }

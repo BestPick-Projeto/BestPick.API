@@ -35,7 +35,7 @@ public class FavoritoRepositorio : IFavoritoRepositorio
         var obtido = await ObterPorIdAsync(id);
         if (obtido == null)
             throw new Exception("Favorito não encontrado.");
-            
+
         obtido.Ativo = false;
         await contexto.SaveChangesAsync();
     }
@@ -52,7 +52,7 @@ public class FavoritoRepositorio : IFavoritoRepositorio
             .FromSqlInterpolated($"{FavoritoQueries.ListarPorUsuario} {usuarioId}")
             .Include(f => f.Produto)
             .ToListAsync();
-        if(obtidos == null)
+        if (obtidos == null)
             throw new Exception("Usuário não possui favoritos!");
 
         return obtidos;

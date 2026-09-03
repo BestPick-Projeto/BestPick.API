@@ -13,22 +13,15 @@ public class HistoricoBuscaConfiguracoes : IEntityTypeConfiguration<HistoricoBus
         builder.Property(nameof(HistoricoBusca.Id)).HasColumnName("HistoricoBuscaId");
         builder.Property(nameof(HistoricoBusca.MotivoCompra)).HasColumnName("MotivoCompra");
         builder.Property(nameof(HistoricoBusca.UsuarioId)).HasColumnName("UsuarioId");
-        builder.Property(nameof(HistoricoBusca.ProdutoId)).HasColumnName("ProdutoId");
-        builder.Property(nameof(HistoricoBusca.Produto)).HasColumnName("Produto");
+        builder.Property(nameof(HistoricoBusca.ProdutoNome)).HasColumnName("ProdutoNome");
         builder.Property(nameof(HistoricoBusca.ValorCompra)).HasColumnName("ValorCompra");
         builder.Property(nameof(HistoricoBusca.Ativo)).HasColumnName("Ativo");
+        builder.Property(nameof(HistoricoBusca.DataBusca)).HasColumnName("DataBusca");
 
         builder.HasOne(x => x.Usuario)
                        .WithMany()
                        .HasForeignKey(x => x.UsuarioId)
                        .IsRequired();
-
-
-        builder.HasOne(x => x.Produto)
-                        .WithMany()
-                        .HasForeignKey(x => x.ProdutoId)
-                        .IsRequired();
-
 
     }
 }

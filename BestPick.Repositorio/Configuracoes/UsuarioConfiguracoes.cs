@@ -13,6 +13,8 @@ public class UsuarioConfiguracoes : IEntityTypeConfiguration<Usuario>
         builder.Property(nameof(Usuario.Id)).HasColumnName("UsuarioId");
         builder.Property(nameof(Usuario.Nome)).HasColumnName("Nome");
         builder.Property(nameof(Usuario.Email)).HasColumnName("Email");
+        builder.Property(nameof(Usuario.Ativo)).HasColumnName("Ativo");
+        builder.Property(nameof(Usuario.Senha)).HasColumnName("Senha");
 
     }
 }

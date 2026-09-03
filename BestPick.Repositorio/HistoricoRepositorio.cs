@@ -1,13 +1,14 @@
 using BestPick.Repositorio.Interfaces;
 using BestPick.Dominio.Entidades;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 
 namespace BestPick.Repositorio.Repositorios;
 
-public class HistoricoBuscaRepositorio : IHistoricoBusca
+public class HistoricoRepositorio : IHistoricoRepositorio
 {
     private readonly BestPickContexto contexto;
-    public HistoricoBuscaRepositorio(BestPickContexto bestPickContexto)
+    public HistoricoRepositorio(BestPickContexto bestPickContexto)
     {
         contexto = bestPickContexto;
     }
@@ -21,6 +22,7 @@ public class HistoricoBuscaRepositorio : IHistoricoBusca
     {
         return await contexto.Historicos
             .Where(h => h.UsuarioId == usuarioId)
+            .Where(h => h.Ativo == true)
             .OrderByDescending(h => h.DataBusca)
             .ToListAsync();
     }
