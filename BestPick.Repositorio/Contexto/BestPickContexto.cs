@@ -1,7 +1,6 @@
 using BestPick.Dominio.Entidades;
 using BestPick.Repositorio.Configuracoes;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 
 public class BestPickContexto : DbContext
 {
@@ -12,6 +11,9 @@ public class BestPickContexto : DbContext
     public DbSet<Favorito> Favoritos { get; set; }
     public DbSet<HistoricoBusca> Historicos { get; set; }
 
+    public BestPickContexto()
+    {
+    }
     public BestPickContexto(DbContextOptions options) : base(options)
     {
         _options = options;
@@ -20,8 +22,11 @@ public class BestPickContexto : DbContext
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         if (_options == null)
-            optionsBuilder.UseSqlServer(@"Server=DESKTOP-58UEHOH\SQLEXPRESS;Database=BestPick;Trusted_Connection=True;TrustServerCertificate=True;");
+        {
+            optionsBuilder.UseSqlServer(@"Server=DESKTOP-58UEHOH;Database=BestPick;Trusted_Connection=True;TrustServerCertificate=True;");
+        }
     }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfiguration(new ProdutoConfiguracao());

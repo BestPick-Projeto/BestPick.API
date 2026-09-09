@@ -30,24 +30,24 @@ public class FavoritoAplicacao : IFavoritoAplicacao
         };
     }
 
-    public async Task<Favorito> AdicionarAsync(FavoritoCriar favorito)
+    public async Task<Favorito> AdicionarAsync(FavoritoCriar favorito, int usuarioId)
     {
         if (favorito == null)
             throw new Exception("Dados do favorito são obrigatórios.");
 
         var favoritoDominio = new Favorito
         {
-            Produto = favorito.Produto,
-            UsuarioId = favorito.UsuarioId,
+            ProdutoId = favorito.ProdutoId,
+            UsuarioId = usuarioId,
             Status = StatusFavorito.Favoritado,
             Ativo = true
         };
 
         return await _favoritoRepositorio.AdicionarAsync(favoritoDominio);
     }
-    public async Task<FavoritoRespostaDto> ObterPorIdAsync(int id)
+    public async Task<FavoritoRespostaDto> ObterPorIdAsync(int id, int usuarioId)
     {
-        var obtido = await _favoritoRepositorio.ObterPorIdAsync(id);
+        var obtido = await _favoritoRepositorio.ObterPorIdAsync(id, usuarioId);
 
         if (obtido == null)
             throw new Exception("Id não encontrado!");
@@ -63,10 +63,10 @@ public class FavoritoAplicacao : IFavoritoAplicacao
 
         return obtidos.Select(ParaDto);
     }
-    public async Task AtualizarStatusAsync(FavoritoAtualizar favorito)
+    public async Task AtualizarStatusAsync(FavoritoAtualizar favorito, int usuarioId)
     {
 
-        var obtido = await _favoritoRepositorio.ObterPorIdAsync(favorito.FavoritoId);
+        var obtido = await _favoritoRepositorio.ObterPorIdAsync(favorito.FavoritoId, usuarioId);
 
         if (obtido == null)
             throw new Exception("Id de favorito não existe!");
@@ -74,9 +74,9 @@ public class FavoritoAplicacao : IFavoritoAplicacao
         obtido.Status = favorito.NovoStatus;
         await _favoritoRepositorio.AtualizarStatusAsync(obtido);
     }
-    public async Task RemoverAsync(int id)
+    public async Task RemoverAsync(int id, int usuarioId)
     {
-        var obtido = await _favoritoRepositorio.ObterPorIdAsync(id);
+        var obtido = await _favoritoRepositorio.ObterPorIdAsync(id, usuarioId);
 
         if (obtido == null)
             throw new Exception("Id de favorito não existe!");

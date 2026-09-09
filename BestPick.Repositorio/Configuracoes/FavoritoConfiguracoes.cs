@@ -15,15 +15,15 @@ public class FavoritoConfiguracoes : IEntityTypeConfiguration<Favorito>
         builder.Property(nameof(Favorito.UsuarioId)).HasColumnName("UsuarioId");
         builder.Property(nameof(Favorito.ProdutoId)).HasColumnName("ProdutoId");
 
-        builder.HasOne(x => x.Produto)
-                       .WithMany()
-                       .HasForeignKey(x => x.ProdutoId)
-                       .IsRequired();
-
         builder.HasOne(x => x.Usuario)
-                       .WithMany()
-                       .HasForeignKey(x => x.UsuarioId)
-                       .IsRequired();
+            .WithMany()
+            .HasForeignKey(x => x.UsuarioId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(x => x.Produto)
+            .WithMany()
+            .HasForeignKey(x => x.ProdutoId)
+            .OnDelete(DeleteBehavior.Restrict);
 
     }
 }

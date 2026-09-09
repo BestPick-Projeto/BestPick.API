@@ -14,14 +14,15 @@ public class HistoricoBuscaConfiguracoes : IEntityTypeConfiguration<HistoricoBus
         builder.Property(nameof(HistoricoBusca.MotivoCompra)).HasColumnName("MotivoCompra");
         builder.Property(nameof(HistoricoBusca.UsuarioId)).HasColumnName("UsuarioId");
         builder.Property(nameof(HistoricoBusca.ProdutoNome)).HasColumnName("ProdutoNome");
-        builder.Property(nameof(HistoricoBusca.ValorCompra)).HasColumnName("ValorCompra");
+        builder.Property(nameof(HistoricoBusca.ValorCompra)).HasColumnName("ValorCompra").HasColumnType("decimal(18,2)");
         builder.Property(nameof(HistoricoBusca.Ativo)).HasColumnName("Ativo");
         builder.Property(nameof(HistoricoBusca.DataBusca)).HasColumnName("DataBusca");
 
         builder.HasOne(x => x.Usuario)
-                       .WithMany()
-                       .HasForeignKey(x => x.UsuarioId)
-                       .IsRequired();
+            .WithMany()
+            .HasForeignKey(x => x.UsuarioId)
+            .IsRequired()
+            .OnDelete(DeleteBehavior.Restrict);
 
     }
 }

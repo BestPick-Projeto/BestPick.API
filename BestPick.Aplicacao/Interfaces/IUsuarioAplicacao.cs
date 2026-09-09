@@ -10,4 +10,5 @@ public interface IUsuarioAplicacao
     Task RemoverAsync(int id);
     Task<UsuarioRespostaDto> ObterPorIdAsync(int id);
     Task AtualizarAsync(UsuarioAtualizar usuario);
+    Task<LoginResposta> LoginAsync(Login login);
 }

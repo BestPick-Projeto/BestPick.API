@@ -16,11 +16,13 @@ public class UsuarioRepositorio : IUsuarioRepositorio
     {
         return await contexto.Usuarios
         .Where(f => f.Id == id)
+        .Where(f => f.Ativo == true)
         .FirstOrDefaultAsync();
     }
     public async Task<IEnumerable<Usuario>> ListarTodosAsync()
     {
         return await contexto.Usuarios
+        .Where(f => f.Ativo == true)
         .ToListAsync();
     }
     public async Task<Usuario> AdicionarAsync(Usuario usuario)
@@ -39,5 +41,10 @@ public class UsuarioRepositorio : IUsuarioRepositorio
     {
         contexto.Usuarios.Update(usuario);
         await contexto.SaveChangesAsync();
+    }
+    public async Task<Usuario> ObterPorEmailAsync(string email)
+    {
+        return await contexto.Usuarios
+            .FirstOrDefaultAsync(x => x.Email == email && x.Ativo);
     }
 }

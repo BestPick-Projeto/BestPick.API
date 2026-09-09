@@ -5,8 +5,7 @@ namespace BestPick.Aplicacao.Models;
 
 public class FavoritoCriar
 {
-    public Produto Produto { get; set; }
-    public int UsuarioId { get; set; }
+    public int ProdutoId { get; set; }
 }
 
 public class FavoritoAtualizar

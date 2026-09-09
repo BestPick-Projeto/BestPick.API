@@ -6,6 +6,6 @@ public interface IHistoricoRepositorio
 {
     Task<HistoricoBusca> AdicionarAsync(HistoricoBusca historicoBusca);
     Task<IEnumerable<HistoricoBusca>> ListarPorUsuarioAsync(int usuarioid);
-    Task RemoverAsync(int id);
-    Task<HistoricoBusca> ObterPorIdAsync(int id);
+    Task RemoverAsync(int Id);
+    Task<HistoricoBusca> ObterPorIdAsync(int historicoId, int usuarioId);
 }

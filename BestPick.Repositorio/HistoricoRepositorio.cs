@@ -26,19 +26,23 @@ public class HistoricoRepositorio : IHistoricoRepositorio
             .OrderByDescending(h => h.DataBusca)
             .ToListAsync();
     }
+    public async Task<HistoricoBusca> ObterPorIdAsync(int id, int usuarioId)
+    {
+        return await contexto.Historicos
+            .FirstOrDefaultAsync(x =>
+                x.Id == id &&
+                x.UsuarioId == usuarioId &&
+                x.Ativo);
+    }
     public async Task RemoverAsync(int id)
     {
-        var obtido = await ObterPorIdAsync(id);
+        var obtido = await contexto.Historicos.FirstOrDefaultAsync(x => x.Id == id && x.Ativo);
+
         if (obtido == null)
             throw new Exception("Historico não encontrado.");
 
         obtido.Ativo = false;
+
         await contexto.SaveChangesAsync();
-    }
-    public async Task<HistoricoBusca> ObterPorIdAsync(int historicoid)
-    {
-        return await contexto.Historicos
-        .Where(f => f.Id == historicoid)
-        .FirstOrDefaultAsync();
     }
 }

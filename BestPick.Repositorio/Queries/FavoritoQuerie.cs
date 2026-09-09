@@ -8,7 +8,7 @@ public static class FavoritoQueries
         AS
         BEGIN
             SELECT * FROM Favorito
-            WHERE Excluido = 0 AND UsuarioId = @UsuarioId
+            WHERE Ativo = 1 AND UsuarioId = @UsuarioId
         END
     ";
 
