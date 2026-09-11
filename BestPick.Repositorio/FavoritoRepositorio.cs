@@ -1,7 +1,6 @@
 using BestPick.Repositorio.Interfaces;
 using BestPick.Dominio.Entidades;
 using Microsoft.EntityFrameworkCore;
-using BestPick.Dominio.Enumeradores;
 using BestPick.Repositorio.Queries;
 using Microsoft.Data.SqlClient;
 

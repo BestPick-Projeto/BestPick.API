@@ -1,7 +1,8 @@
 using BestPick.Repositorio.Interfaces;
 using BestPick.Dominio.Entidades;
 using Microsoft.EntityFrameworkCore;
-using System.Globalization;
+using BestPick.Repositorio.Queries;
+using Microsoft.Data.SqlClient;
 
 namespace BestPick.Repositorio.Repositorios;
 
@@ -20,11 +21,16 @@ public class HistoricoRepositorio : IHistoricoRepositorio
     }
     public async Task<IEnumerable<HistoricoBusca>> ListarPorUsuarioAsync(int usuarioId)
     {
-        return await contexto.Historicos
-            .Where(h => h.UsuarioId == usuarioId)
-            .Where(h => h.Ativo == true)
-            .OrderByDescending(h => h.DataBusca)
-            .ToListAsync();
+        var parametro = new SqlParameter("@UsuarioId", usuarioId);
+
+        var obtidos = await contexto.Historicos.FromSqlRaw
+        (HistoricoQueries.ListarPorUsuario, parametro)
+        .ToListAsync();
+
+        if (obtidos == null)
+            throw new Exception("Usuário não possui históricos!");
+
+        return obtidos;
     }
     public async Task<HistoricoBusca> ObterPorIdAsync(int id, int usuarioId)
     {

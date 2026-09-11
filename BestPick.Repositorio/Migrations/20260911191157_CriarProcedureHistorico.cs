@@ -1,0 +1,20 @@
+﻿using BestPick.Repositorio.Queries;
+using Microsoft.EntityFrameworkCore.Migrations;
+
+#nullable disable
+
+namespace BestPick.Repositorio.Migrations
+{
+    public partial class CriarProcedureHistorico : Migration
+    {
+        protected override void Up(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.Sql(HistoricoQueries.CriarProcedureListarPorUsuario);
+        }
+
+        protected override void Down(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.Sql("DROP PROCEDURE sp_ListarHistoricoPorUsuario");
+        }
+    }
+}
