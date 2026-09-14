@@ -2,7 +2,6 @@ using BestPick.Aplicacao.Interfaces;
 using BestPick.Repositorio.Interfaces;
 using BestPick.Aplicacao.Models;
 using BestPick.Dominio.Entidades;
-using BestPick.Repositorio.Repositorios;
 using BestPick.Dominio.Enumeradores;
 
 namespace BestPick.Aplicacao.Aplicacoes;

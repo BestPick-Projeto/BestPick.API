@@ -16,6 +16,12 @@ public class ChatRequest
     [JsonProperty("max_tokens")]
     public int MaxTokens { get; set; }
 
+    [JsonProperty("compound_custom")]
+    public CompoundCustom CompoundCustom { get; set; }
+
+    [JsonProperty("search_settings")]
+    public SearchSettings SearchSettings { get; set; }
+
     public ChatRequest(string model, List<Message> messages, double temperature, int maxTokens)
     {
         Model = model;

@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using BestPick.Servicos;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,7 +15,9 @@ builder.Services.AddScoped<IUsuarioAplicacao, UsuarioAplicacao>();
 builder.Services.AddScoped<IFavoritoAplicacao, FavoritoAplicacao>();
 builder.Services.AddScoped<IHistoricoAplicacao, HistoricoAplicacao>();
 builder.Services.AddScoped<IProdutoAplicacao, ProdutoAplicacao>();
-
+builder.Services.AddHttpClient<ChatService>();
+builder.Services.AddHttpClient<MercadoLivreService>();
+builder.Services.AddHttpClient<MercadoLivreService>();
 
 // Autenticação com JWT
 var jwtKey = builder.Configuration["Jwt:Key"];

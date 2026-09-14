@@ -2,8 +2,6 @@ using BestPick.Aplicacao.Interfaces;
 using BestPick.Repositorio.Interfaces;
 using BestPick.Aplicacao.Models;
 using BestPick.Dominio.Entidades;
-using BestPick.Repositorio.Repositorios;
-using BestPick.Dominio.Enumeradores;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
