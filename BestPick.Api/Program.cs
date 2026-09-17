@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using BestPick.Servicos;
+using BestPick.Aplicacao;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +16,7 @@ builder.Services.AddScoped<IUsuarioAplicacao, UsuarioAplicacao>();
 builder.Services.AddScoped<IFavoritoAplicacao, FavoritoAplicacao>();
 builder.Services.AddScoped<IHistoricoAplicacao, HistoricoAplicacao>();
 builder.Services.AddScoped<IProdutoAplicacao, ProdutoAplicacao>();
+builder.Services.AddScoped<IDashboardAplicacao, DashboardAplicacao>();
 builder.Services.AddHttpClient<ChatService>();
 builder.Services.AddHttpClient<MercadoLivreService>();
 builder.Services.AddHttpClient<MercadoLivreService>();

@@ -6,7 +6,7 @@ public class BestPickChatResposta
 
     public string Produto { get; set; }
 
-    public decimal ValorCompra { get; set; }
+    public decimal? ValorCompra { get; set; }
 
     public string MotivoCompra { get; set; }
 

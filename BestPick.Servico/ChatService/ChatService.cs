@@ -24,11 +24,6 @@ public class ChatService
 
         _httpClient.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", _apiKey);
-
-        _httpClient.DefaultRequestHeaders.Add(
-            "Groq-Model-Version",
-            "latest"
-        );
     }
 
     public async Task<string> EnviarPerguntaAsync(List<Message> historico)
@@ -42,24 +37,14 @@ public class ChatService
      _model,
      historico,
      0.1,
-     3000
+     1000
  );
 
-            requisicao.SearchSettings = new SearchSettings
-            {
-                IncludeDomains = new List<string>
-    {
-        "mercadolivre.com.br",
-        "amazon.com.br",
-        "shopee.com.br"
-    },
-
-                Country = "brazil"
-            };
             string json =
                 JsonConvert.SerializeObject(requisicao);
 
             Console.WriteLine(json);
+
             var conteudo = new StringContent(
                 json,
                 Encoding.UTF8,
@@ -114,44 +99,63 @@ public class ChatService
             if (string.IsNullOrWhiteSpace(mensagem))
                 throw new Exception("A mensagem não pode estar vazia.");
 
+            if (valorCompra.HasValue && valorCompra.Value <= 0)
+                valorCompra = null;
+
+            if (string.IsNullOrWhiteSpace(produto) ||
+                produto == "string")
+                produto = null;
+
+            if (string.IsNullOrWhiteSpace(motivoCompra) ||
+                motivoCompra == "string")
+                motivoCompra = null;
+
             string prompt = $@"
 Você é o assistente do BestPick.
+
+Seu objetivo é conversar com o usuário e descobrir 3 informações:
+
+1. Qual produto ele deseja comprar.
+2. Qual o valor máximo que ele pretende gastar.
+3. Qual o motivo ou principal uso da compra.
+
+Dados já identificados:
 
 Produto: {produto ?? "não informado"}
 Valor máximo: {(valorCompra.HasValue ? valorCompra.Value.ToString() : "não informado")}
 Motivo: {motivoCompra ?? "não informado"}
 
-Mensagem:
+Nova mensagem do usuário:
 {mensagem}
 
-Se produto, valor ou motivo estiverem faltando,
-retorne completo false e pergunte somente o dado faltante.
+Analise a nova mensagem e atualize os dados.
 
-Se todos estiverem preenchidos:
-pesquise produtos atuais nas lojas permitidas,
-não invente preços ou links,
-considere somente produtos dentro do orçamento
-e retorne 3 opções adequadas ao motivo da compra.
+Nunca apague uma informação que já foi identificada,
+a menos que o usuário claramente informe que deseja alterá-la.
 
-Retorne somente JSON:
+Considere o valor máximo preenchido somente quando ele for maior que zero.
+
+Se ainda faltar alguma informação,
+retorne completo false e faça somente uma pergunta
+para obter uma das informações que ainda estão faltando.
+
+Se produto, valor máximo e motivo estiverem preenchidos,
+retorne completo true.
+
+Não pesquise produtos.
+Não recomende produtos.
+Não invente preços.
+Não invente links.
+
+Retorne somente JSON neste formato:
 
 {{
-    ""completo"": true,
-    ""produto"": ""produto"",
-    ""valorCompra"": 0,
-    ""motivoCompra"": ""motivo"",
-    ""mensagem"": ""Encontrei algumas opções para você."",
-    ""produtos"": [
-        {{
-            ""nome"": ""nome"",
-            ""categoria"": ""categoria"",
-            ""preco"": 0,
-            ""imgUrl"": """",
-            ""url"": ""url real"",
-            ""beneficios"": [],
-            ""maleficios"": []
-        }}
-    ]
+    ""completo"": false,
+    ""produto"": null,
+    ""valorCompra"": null,
+    ""motivoCompra"": null,
+    ""mensagem"": ""pergunta ou mensagem para o usuário"",
+    ""produtos"": []
 }}
 ";
 
@@ -159,7 +163,7 @@ Retorne somente JSON:
 {
     new Message(
         "system",
-        "Você é o assistente do BestPick. Use as ferramentas de pesquisa quando necessário e retorne somente JSON válido."
+        "Você é o assistente do BestPick. Sua função é identificar produto, orçamento máximo e motivo da compra. Retorne somente JSON válido."
     ),
 
     new Message(
@@ -197,39 +201,34 @@ Retorne somente JSON:
                 );
             }
 
+            if (respostaBestPick.ValorCompra.HasValue &&
+                respostaBestPick.ValorCompra.Value <= 0)
+            {
+                respostaBestPick.ValorCompra = null;
+                respostaBestPick.Completo = false;
+            }
+
+            if (string.IsNullOrWhiteSpace(respostaBestPick.Produto) ||
+                respostaBestPick.Produto == "string")
+            {
+                respostaBestPick.Produto = null;
+                respostaBestPick.Completo = false;
+            }
+
+            if (string.IsNullOrWhiteSpace(respostaBestPick.MotivoCompra) ||
+                respostaBestPick.MotivoCompra == "string")
+            {
+                respostaBestPick.MotivoCompra = null;
+                respostaBestPick.Completo = false;
+            }
+
             if (respostaBestPick.Completo)
             {
-                if (respostaBestPick.Produtos == null ||
-                    respostaBestPick.Produtos.Count != 3)
-                {
-                    throw new Exception(
-                        "A IA deve retornar exatamente 3 produtos."
-                    );
-                }
+                respostaBestPick.Produtos =
+                    new List<BestPickProdutoResposta>();
 
-                foreach (var produtoResposta in respostaBestPick.Produtos)
-                {
-                    if (string.IsNullOrWhiteSpace(produtoResposta.Nome))
-                    {
-                        throw new Exception(
-                            "A IA retornou um produto sem nome."
-                        );
-                    }
-
-                    if (produtoResposta.Preco <= 0)
-                    {
-                        throw new Exception(
-                            "A IA retornou um produto com preço inválido."
-                        );
-                    }
-
-                    if (string.IsNullOrWhiteSpace(produtoResposta.Url))
-                    {
-                        throw new Exception(
-                            "A IA retornou um produto sem link da oferta."
-                        );
-                    }
-                }
+                respostaBestPick.Mensagem =
+                    "Já tenho todas as informações necessárias para buscar as melhores opções.";
             }
 
             return respostaBestPick;
