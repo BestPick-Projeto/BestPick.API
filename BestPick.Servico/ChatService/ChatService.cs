@@ -1,249 +1,313 @@
 using BestPick.Servicos.Models;
+using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System.Net.Http.Headers;
 using System.Text;
-using Microsoft.Extensions.Configuration;
+using System.Text.RegularExpressions;
 
 namespace BestPick.Servicos;
 
 public class ChatService
 {
     private readonly HttpClient _httpClient;
-    private readonly string _apiKey;
+    private readonly ProdutoBuscaService _produtoBuscaService;
     private readonly string _model;
 
     private const string API_URL =
         "https://api.groq.com/openai/v1/chat/completions";
 
-    public ChatService(HttpClient httpClient, IConfiguration configuration)
+    public ChatService(HttpClient httpClient, IConfiguration configuration, ProdutoBuscaService produtoBuscaService)
     {
         _httpClient = httpClient;
-
-        _apiKey = configuration["Groq:ApiKey"];
+        _produtoBuscaService = produtoBuscaService;
         _model = configuration["Groq:Model"];
 
         _httpClient.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", _apiKey);
+            new AuthenticationHeaderValue(
+                "Bearer",
+                configuration["Groq:ApiKey"]);
     }
 
-    public async Task<string> EnviarPerguntaAsync(List<Message> historico)
+    public async Task<BestPickChatResposta> EnviarMensagemAsync(string mensagem, string produto = null, decimal? valorCompra = null, string motivoCompra = null)
     {
-        try
+        if (string.IsNullOrWhiteSpace(mensagem))
+            throw new Exception("A mensagem não pode estar vazia.");
+
+        mensagem = mensagem.Trim();
+        produto = LimparTexto(produto);
+        motivoCompra = LimparTexto(motivoCompra);
+
+        if (valorCompra <= 0)
+            valorCompra = null; 
+        BestPickChatResposta resultado;
+
+        if (produto != null && valorCompra.HasValue && motivoCompra == null)
         {
-            if (historico == null || historico.Count == 0)
-                throw new Exception("O histórico de mensagens está vazio.");
-
-            var requisicao = new ChatRequest(
-     _model,
-     historico,
-     0.1,
-     1000
- );
-
-            string json =
-                JsonConvert.SerializeObject(requisicao);
-
-            Console.WriteLine(json);
-
-            var conteudo = new StringContent(
-                json,
-                Encoding.UTF8,
-                "application/json"
-            );
-
-            HttpResponseMessage resposta =
-                await _httpClient.PostAsync(
-                    API_URL,
-                    conteudo
-                );
-
-            string corpoResposta =
-                await resposta.Content.ReadAsStringAsync();
-
-            if (!resposta.IsSuccessStatusCode)
-                return $"[ERRO GROQ]: {corpoResposta}";
-
-            var chatResponse =
-                JsonConvert.DeserializeObject<ChatResponse>(
-                    corpoResposta
-                );
-
-            if (chatResponse?.Choices == null ||
-                chatResponse.Choices.Count == 0 ||
-                chatResponse.Choices[0]?.Message == null)
+            resultado = new()
             {
-                return "[Sem resposta válida da IA]";
-            }
+                Produto = produto,
+                ValorCompra = valorCompra,
+                MotivoCompra = mensagem,
+                Produtos = new()
+            };
+        }
+        else
+        {
+            resultado = await IdentificarDadosAsync(mensagem, produto, valorCompra, motivoCompra);
 
-            return chatResponse.Choices[0].Message.Content
-                ?? "[Sem resposta]";
+            resultado.Produto ??= produto;
+            resultado.ValorCompra ??= valorCompra;
+            resultado.MotivoCompra ??= motivoCompra;
         }
-        catch (HttpRequestException ex)
+
+        if (!DadosCompletos(resultado))
         {
-            return $"[ERRO DE CONEXÃO]: {ex.Message}";
+            resultado.Completo = false;
+            resultado.Produtos = new();
+            resultado.Mensagem = CriarPergunta(resultado);
+
+            return resultado;
         }
-        catch (Exception ex)
+
+        resultado.Completo = true;
+
+        var produtos = await _produtoBuscaService.BuscarAsync(resultado.Produto, resultado.ValorCompra.Value);
+
+        if (produtos.Count == 0)
         {
-            return $"[ERRO]: {ex.Message}";
+            resultado.Produtos = new();
+            resultado.Mensagem =
+                "Não encontrei produtos dentro do orçamento informado.";
+
+            return resultado;
         }
+
+        resultado.Produtos = await SelecionarProdutosAsync(produtos, resultado.Produto, resultado.MotivoCompra, resultado.ValorCompra.Value);
+
+        resultado.Mensagem =
+            "Encontrei as opções com melhor custo-benefício para o que você procura.";
+
+        return resultado;
     }
 
-    public async Task<BestPickChatResposta> EnviarMensagemAsync(
-        string mensagem,
-        string produto = null,
-        decimal? valorCompra = null,
-        string motivoCompra = null)
+    private async Task<BestPickChatResposta> IdentificarDadosAsync(string mensagem, string produto, decimal? valorCompra, string motivoCompra)
     {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(mensagem))
-                throw new Exception("A mensagem não pode estar vazia.");
-
-            if (valorCompra.HasValue && valorCompra.Value <= 0)
-                valorCompra = null;
-
-            if (string.IsNullOrWhiteSpace(produto) ||
-                produto == "string")
-                produto = null;
-
-            if (string.IsNullOrWhiteSpace(motivoCompra) ||
-                motivoCompra == "string")
-                motivoCompra = null;
-
-            string prompt = $@"
-Você é o assistente do BestPick.
-
-Seu objetivo é conversar com o usuário e descobrir 3 informações:
-
-1. Qual produto ele deseja comprar.
-2. Qual o valor máximo que ele pretende gastar.
-3. Qual o motivo ou principal uso da compra.
-
-Dados já identificados:
-
+        string prompt = $@"
+Dados atuais:
 Produto: {produto ?? "não informado"}
-Valor máximo: {(valorCompra.HasValue ? valorCompra.Value.ToString() : "não informado")}
+Valor: {(valorCompra.HasValue ? valorCompra.Value : "não informado")}
 Motivo: {motivoCompra ?? "não informado"}
 
-Nova mensagem do usuário:
-{mensagem}
+Nova mensagem: ""{mensagem}""
 
-Analise a nova mensagem e atualize os dados.
+Identifique produto, valorCompra e motivoCompra.
+Preserve os dados já informados.
+Use a nova mensagem para preencher ou alterar dados.
 
-Nunca apague uma informação que já foi identificada,
-a menos que o usuário claramente informe que deseja alterá-la.
-
-Considere o valor máximo preenchido somente quando ele for maior que zero.
-
-Se ainda faltar alguma informação,
-retorne completo false e faça somente uma pergunta
-para obter uma das informações que ainda estão faltando.
-
-Se produto, valor máximo e motivo estiverem preenchidos,
-retorne completo true.
-
-Não pesquise produtos.
-Não recomende produtos.
-Não invente preços.
-Não invente links.
-
-Retorne somente JSON neste formato:
-
+Retorne SOMENTE JSON:
 {{
     ""completo"": false,
     ""produto"": null,
     ""valorCompra"": null,
     ""motivoCompra"": null,
-    ""mensagem"": ""pergunta ou mensagem para o usuário"",
+    ""mensagem"": """",
     ""produtos"": []
-}}
-";
+}}";
 
-            var historico = new List<Message>
-{
-    new Message(
-        "system",
-        "Você é o assistente do BestPick. Sua função é identificar produto, orçamento máximo e motivo da compra. Retorne somente JSON válido."
-    ),
+        string resposta = await EnviarGroqAsync("Extraia os dados da compra e retorne somente JSON.",prompt);
 
-    new Message(
-        "user",
-        prompt
-    )
-};
-
-            string resposta =
-                await EnviarPerguntaAsync(historico);
-
-            if (string.IsNullOrWhiteSpace(resposta))
-                throw new Exception(
-                    "A IA retornou uma resposta vazia."
-                );
-
-            if (resposta.StartsWith("[ERRO"))
-                throw new Exception(resposta);
-
-            resposta = resposta
-                .Replace("```json", "")
-                .Replace("```JSON", "")
-                .Replace("```", "")
-                .Trim();
-
-            var respostaBestPick =
-                JsonConvert.DeserializeObject<BestPickChatResposta>(
-                    resposta
-                );
-
-            if (respostaBestPick == null)
-            {
-                throw new Exception(
-                    "A IA não retornou uma resposta válida."
-                );
-            }
-
-            if (respostaBestPick.ValorCompra.HasValue &&
-                respostaBestPick.ValorCompra.Value <= 0)
-            {
-                respostaBestPick.ValorCompra = null;
-                respostaBestPick.Completo = false;
-            }
-
-            if (string.IsNullOrWhiteSpace(respostaBestPick.Produto) ||
-                respostaBestPick.Produto == "string")
-            {
-                respostaBestPick.Produto = null;
-                respostaBestPick.Completo = false;
-            }
-
-            if (string.IsNullOrWhiteSpace(respostaBestPick.MotivoCompra) ||
-                respostaBestPick.MotivoCompra == "string")
-            {
-                respostaBestPick.MotivoCompra = null;
-                respostaBestPick.Completo = false;
-            }
-
-            if (respostaBestPick.Completo)
-            {
-                respostaBestPick.Produtos =
-                    new List<BestPickProdutoResposta>();
-
-                respostaBestPick.Mensagem =
-                    "Já tenho todas as informações necessárias para buscar as melhores opções.";
-            }
-
-            return respostaBestPick;
-        }
-        catch (JsonException ex)
-        {
-            throw new Exception(
-                $"A IA retornou um JSON inválido: {ex.Message}"
-            );
-        }
-        catch (Exception ex)
-        {
-            throw new Exception(
-                $"Erro ao gerar recomendação da IA: {ex.Message}"
-            );
-        }
+        return JsonConvert.DeserializeObject<BestPickChatResposta>(LimparJson(resposta))
+        ?? throw new Exception(
+                "A IA não retornou uma resposta válida.");
     }
+
+    private async Task<List<BestPickProdutoResposta>> SelecionarProdutosAsync(List<ProdutoBuscaResposta> produtos, string produto, string motivoCompra, decimal valorCompra)
+    {
+        var candidatos = produtos.Select((p, i) => new
+        {
+            indice = i,
+            p.Nome,
+            p.Preco,
+            p.Loja,
+            p.Avaliacao,
+            p.Avaliacoes
+        });
+
+        string prompt = $@"
+Produto: {produto}
+Orçamento: R$ {valorCompra}
+Motivo: {motivoCompra}
+
+Candidatos:
+{JsonConvert.SerializeObject(candidatos)}
+
+Escolha até 3 produtos diferentes.
+Se houver pelo menos 3 candidatos, escolha 3.
+
+Considere motivo, características do nome, preço,
+avaliação e quantidade de avaliações juntas.
+
+Use SOMENTE os dados fornecidos.
+Não invente características ou desempenho.
+
+Gere até 3 benefícios em português usando SOMENTE
+informações presentes no nome do produto.
+Não use preço, loja ou avaliações como benefício.
+
+Retorne SOMENTE JSON:
+[
+    {{
+        ""indice"": 0,
+        ""beneficios"": [""benefício em português""]
+    }}
+]";
+
+        string resposta = await EnviarGroqAsync(
+            "Escolha os melhores produtos usando somente os dados fornecidos. Retorne somente JSON.",
+            prompt);
+
+        var escolhidos = JArray.Parse(ExtrairArray(resposta));
+
+        var resultado = new List<BestPickProdutoResposta>();
+
+        foreach (var escolhido in escolhidos)
+        {
+            int? indice = escolhido["indice"]?.Value<int?>();
+
+            if (!indice.HasValue ||
+                indice < 0 ||
+                indice >= produtos.Count ||
+                resultado.Any(p =>
+                    p.Nome == produtos[indice.Value].Nome))
+                continue;
+
+            resultado.Add(CriarProdutoResposta(produtos[indice.Value], produto, escolhido["beneficios"]
+                    ?.ToObject<List<string>>()));
+
+            if (resultado.Count == 3)
+                return resultado;
+        }
+
+        foreach (var candidato in produtos)
+        {
+            if (resultado.Count == 3)
+                break;
+
+            if (!resultado.Any(p =>
+                p.Nome == candidato.Nome))
+                resultado.Add(CriarProdutoResposta(candidato, produto, null));
+        }
+
+        return resultado;
+    }
+
+    private BestPickProdutoResposta CriarProdutoResposta(ProdutoBuscaResposta produto, string categoria,List<string> beneficios) =>
+        new()
+        {
+            Nome = produto.Nome,
+            Categoria = categoria,
+            Preco = produto.Preco,
+            ImgUrl = produto.ImgUrl,
+            Url = produto.Url,
+            Beneficios = beneficios?.Count > 0
+                ? beneficios.Take(3).ToList()
+                : CriarBeneficios(produto.Nome)
+        };
+
+    private List<string> CriarBeneficios(string nome)
+    {
+        var beneficios = new List<string>();
+
+        var memoria = Regex.Match(nome ?? "",
+            @"(\d+)\s*GB\s*(GDDR\d+)?",
+            RegexOptions.IgnoreCase);
+
+        var modelo = Regex.Match( nome ?? "",
+            @"\b(RTX|GTX|RX)\s*\d+[A-Za-z0-9]*\b",
+            RegexOptions.IgnoreCase);
+
+        if (memoria.Success)
+        {
+            string quantidade = memoria.Groups[1].Value;
+            string tipo = memoria.Groups[2].Value;
+
+            beneficios.Add(string.IsNullOrWhiteSpace(tipo)
+                    ? $"Possui {quantidade}GB de memória."
+                    : $"Possui {quantidade}GB de memória {tipo.ToUpper()}.");
+        }
+
+        if (modelo.Success)beneficios.Add($"Pertence à linha {modelo.Value.ToUpper()}.");
+
+        if (Regex.IsMatch(nome ?? "", @"\bOC\b", RegexOptions.IgnoreCase))
+            beneficios.Add("O modelo possui identificação OC.");
+
+        return beneficios.Take(3).ToList();
+    }
+
+    private async Task<string> EnviarGroqAsync(string sistema, string prompt)
+    {
+        var requisicao = new ChatRequest(_model, new List<Message>
+            {
+                new("system", sistema),
+                new("user", prompt)
+            },
+            0.1,
+            2000);
+
+        using var conteudo = new StringContent(
+            JsonConvert.SerializeObject(requisicao),
+            Encoding.UTF8,
+            "application/json");
+
+        var resposta =
+            await _httpClient.PostAsync(API_URL, conteudo);
+
+        string corpo = await resposta.Content.ReadAsStringAsync();
+
+        if (!resposta.IsSuccessStatusCode)
+            throw new Exception($"Erro Groq: {corpo}");
+
+        return JsonConvert
+            .DeserializeObject<ChatResponse>(corpo)
+            ?.Choices?[0]?.Message?.Content
+            ?? throw new Exception("A Groq retornou uma resposta vazia.");
+    }
+
+    private bool DadosCompletos(BestPickChatResposta resultado) =>
+    !string.IsNullOrWhiteSpace(resultado.Produto) &&
+        !string.IsNullOrWhiteSpace(resultado.MotivoCompra) &&
+        resultado.ValorCompra > 0;
+
+    private string CriarPergunta(BestPickChatResposta resultado) =>
+    string.IsNullOrWhiteSpace(resultado.Produto)
+            ? "Qual produto você deseja comprar?"
+            : !resultado.ValorCompra.HasValue ||
+              resultado.ValorCompra <= 0
+                ? "Qual o valor da compra?"
+                : "Qual o motivo da compra?";
+
+    private string LimparJson(string json) => json
+            .Replace("```json", "")
+            .Replace("```JSON", "")
+            .Replace("```", "")
+            .Trim();
+
+    private string ExtrairArray(string resposta)
+    {
+        resposta = LimparJson(resposta);
+
+        int inicio = resposta.IndexOf('[');
+        int fim = resposta.LastIndexOf(']');
+
+        if (inicio < 0 || fim < inicio)
+            throw new Exception($"Resposta inválida da Groq: {resposta}");
+
+        return resposta.Substring(inicio, fim - inicio + 1);
+    }
+
+    private string LimparTexto(string texto) => string.IsNullOrWhiteSpace(texto) ||
+        texto == "string"
+            ? null
+            : texto;
 }

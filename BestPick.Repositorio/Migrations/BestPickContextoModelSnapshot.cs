@@ -119,10 +119,6 @@ namespace BestPick.Repositorio.Migrations
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("ImgUrl");
 
-                    b.Property<string>("Maleficios")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("Maleficios");
-
                     b.Property<string>("Nome")
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("Nome");

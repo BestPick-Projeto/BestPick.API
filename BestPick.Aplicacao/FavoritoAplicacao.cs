@@ -24,7 +24,6 @@ public class FavoritoAplicacao : IFavoritoAplicacao
             ImgUrl = favorito.Produto.ImgUrl,
             Url = favorito.Produto.Url,
             Beneficios = favorito.Produto.Beneficios,
-            Maleficios = favorito.Produto.Maleficios,
             Status = favorito.Status.ToString()
         };
     }

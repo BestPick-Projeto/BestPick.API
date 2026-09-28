@@ -13,6 +13,4 @@ public class BestPickProdutoResposta
     public string Url { get; set; }
 
     public List<string> Beneficios { get; set; }
-
-    public List<string> Maleficios { get; set; }
 }

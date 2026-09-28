@@ -6,9 +6,8 @@ namespace BestPick.Aplicacao.Interfaces;
 public interface IUsuarioAplicacao
 {
     Task<Usuario> AdicionarAsync(UsuarioCriar usuario);
-    Task<IEnumerable<UsuarioRespostaDto>> ListarTodosAsync();
-    Task RemoverAsync(int id);
     Task<UsuarioRespostaDto> ObterPorIdAsync(int id);
-    Task AtualizarAsync(UsuarioAtualizar usuario);
+    Task AtualizarAsync(UsuarioAtualizar usuario, int usuarioId);
+    Task RemoverAsync(int id);
     Task<LoginResposta> LoginAsync(Login login);
 }

@@ -10,6 +10,5 @@ public class Produto
     public string ImgUrl { get; set; }
     public string Url { get; set; }
     public List<string> Beneficios { get; set; }
-    public List<string> Maleficios { get; set; }
     public HistoricoBusca HistoricoBusca { get; set; }
 }

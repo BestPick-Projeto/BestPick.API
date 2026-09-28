@@ -18,8 +18,8 @@ builder.Services.AddScoped<IHistoricoAplicacao, HistoricoAplicacao>();
 builder.Services.AddScoped<IProdutoAplicacao, ProdutoAplicacao>();
 builder.Services.AddScoped<IDashboardAplicacao, DashboardAplicacao>();
 builder.Services.AddHttpClient<ChatService>();
-builder.Services.AddHttpClient<MercadoLivreService>();
-builder.Services.AddHttpClient<MercadoLivreService>();
+builder.Services.AddHttpClient<ProdutoBuscaService>();
+
 
 // Autenticação com JWT
 var jwtKey = builder.Configuration["Jwt:Key"];

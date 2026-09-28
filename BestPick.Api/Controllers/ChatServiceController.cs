@@ -18,8 +18,7 @@ public class ChatController : ControllerBase
 
     [HttpPost]
     [Route("Mensagem")]
-    public async Task<ActionResult> EnviarMensagem(
-        [FromBody] ChatRequisicao dto)
+    public async Task<ActionResult> EnviarMensagem([FromBody] ChatRequisicao dto)
     {
         try
         {

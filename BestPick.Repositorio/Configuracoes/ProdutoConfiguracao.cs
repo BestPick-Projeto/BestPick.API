@@ -25,14 +25,6 @@ public class ProdutoConfiguracao : IEntityTypeConfiguration<Produto>
                 texto => texto.Split(';', StringSplitOptions.RemoveEmptyEntries).ToList()
    );
 
-        builder.Property(x => x.Maleficios)
-            .HasColumnName("Maleficios")
-            .HasConversion(
-                lista => string.Join(';', lista),
-                texto => texto.Split(';', StringSplitOptions.RemoveEmptyEntries).ToList()
-            );
-
-
         builder.HasOne(x => x.HistoricoBusca)
             .WithMany()
             .HasForeignKey(x => x.HistoricoBuscaId)

@@ -1,7 +1,6 @@
-using System.Threading.Tasks;
+using System.Security.Claims;
 using BestPick.Aplicacao.Interfaces;
 using BestPick.Aplicacao.Models;
-using BestPick.Dominio.Entidades;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -33,66 +32,6 @@ public class UsuarioController : ControllerBase
         }
     }
 
-    [HttpGet("{id}")]
-    public async Task<IActionResult> ObterPorIdAsync([FromRoute] int id)
-    {
-        try
-        {
-            var resultado = await _usuarioAplicacao.ObterPorIdAsync(id);
-
-            return Ok(resultado);
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(ex.Message);
-        }
-    }
-
-    [HttpGet]
-    public async Task<IActionResult> ListarTodosAsyncAsync()
-    {
-        try
-        {
-            var resultado = await _usuarioAplicacao.ListarTodosAsync();
-
-            return Ok(resultado);
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(ex.Message);
-        }
-    }
-
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> RemoverAsync([FromRoute] int id)
-    {
-        try
-        {
-            await _usuarioAplicacao.RemoverAsync(id);
-
-            return Ok();
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(ex.Message);
-        }
-    }
-
-    [HttpPut]
-    public async Task<IActionResult> AtualizarAsync([FromBody] UsuarioAtualizar usuario)
-    {
-        try
-        {
-            await _usuarioAplicacao.AtualizarAsync(usuario);
-
-            return Ok();
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(ex.Message);
-        }
-    }
-
     [HttpPost("login")]
     public async Task<IActionResult> LoginAsync([FromBody] Login login)
     {
@@ -101,6 +40,67 @@ public class UsuarioController : ControllerBase
             var resultado = await _usuarioAplicacao.LoginAsync(login);
 
             return Ok(resultado);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [Authorize]
+    [HttpGet]
+    public async Task<IActionResult> ObterAsync()
+    {
+        try
+        {
+            var usuarioId = int.Parse(
+                User.FindFirst(ClaimTypes.NameIdentifier).Value
+            );
+
+            var resultado = await _usuarioAplicacao.ObterPorIdAsync(usuarioId);
+
+            return Ok(resultado);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [Authorize]
+    [HttpPut]
+    public async Task<IActionResult> AtualizarAsync(
+        [FromBody] UsuarioAtualizar usuario)
+    {
+        try
+        {
+            var usuarioId = int.Parse(
+                User.FindFirst(ClaimTypes.NameIdentifier).Value
+            );
+
+            await _usuarioAplicacao.AtualizarAsync(usuario, usuarioId);
+
+            return Ok();
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [Authorize]
+    [HttpDelete]
+    public async Task<IActionResult> RemoverAsync()
+    {
+        try
+        {
+            var usuarioId = int.Parse(
+                User.FindFirst(ClaimTypes.NameIdentifier).Value
+            );
+
+            await _usuarioAplicacao.RemoverAsync(usuarioId);
+
+            return Ok();
         }
         catch (Exception ex)
         {

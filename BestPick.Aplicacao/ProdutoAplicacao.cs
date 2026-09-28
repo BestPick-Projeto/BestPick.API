@@ -25,8 +25,7 @@ public class ProdutoAplicacao : IProdutoAplicacao
             Preco = produto.Preco,
             ImgUrl = produto.ImgUrl,
             Url = produto.Url,
-            Beneficios = produto.Beneficios,
-            Maleficios = produto.Maleficios
+            Beneficios = produto.Beneficios
         };
     }
 
@@ -43,8 +42,7 @@ public class ProdutoAplicacao : IProdutoAplicacao
             Preco = produto.Preco,
             ImgUrl = produto.ImgUrl,
             Url = produto.Url,
-            Beneficios = produto.Beneficios,
-            Maleficios = produto.Maleficios
+            Beneficios = produto.Beneficios
         };
 
         return await _produtoRepositorio.AdicionarAsync(produtoDominio);
@@ -60,9 +58,11 @@ public class ProdutoAplicacao : IProdutoAplicacao
         return ParaDto(obtido);
     }
 
-    public async Task<IEnumerable<ProdutoRespostaDto>> BuscarPorHistoricoAsync(int historicoBuscaId)
+    public async Task<IEnumerable<ProdutoRespostaDto>> BuscarPorHistoricoAsync(
+        int historicoBuscaId)
     {
-        var produtos = await _produtoRepositorio.BuscarPorHistoricoAsync(historicoBuscaId);
+        var produtos =
+            await _produtoRepositorio.BuscarPorHistoricoAsync(historicoBuscaId);
 
         return produtos.Select(ParaDto);
     }

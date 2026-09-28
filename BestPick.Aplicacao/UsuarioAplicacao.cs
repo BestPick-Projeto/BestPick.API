@@ -34,7 +34,7 @@ public class UsuarioAplicacao : IUsuarioAplicacao
     public async Task<Usuario> AdicionarAsync(UsuarioCriar usuario)
     {
         if (usuario == null)
-            throw new Exception("Usuário obrigátorio!");
+            throw new Exception("Usuário obrigatório!");
 
         var usuarioDominio = new Usuario
         {
@@ -56,18 +56,11 @@ public class UsuarioAplicacao : IUsuarioAplicacao
         return ParaDto(obtido);
     }
 
-    public async Task<IEnumerable<UsuarioRespostaDto>> ListarTodosAsync()
+    public async Task AtualizarAsync(
+        UsuarioAtualizar usuario,
+        int usuarioId)
     {
-        var obtidos = await _usuarioRepositorio.ListarTodosAsync();
-
-        if (obtidos == null)
-            throw new Exception("Usuário não existe!");
-
-        return obtidos.Select(ParaDto);
-    }
-    public async Task AtualizarAsync(UsuarioAtualizar usuario)
-    {
-        var obtido = await _usuarioRepositorio.ObterPorIdAsync(usuario.Id);
+        var obtido = await _usuarioRepositorio.ObterPorIdAsync(usuarioId);
 
         if (obtido == null)
             throw new Exception("Usuário não existe!");
@@ -86,8 +79,10 @@ public class UsuarioAplicacao : IUsuarioAplicacao
             throw new Exception("Usuário não existe!");
 
         obtido.Ativo = false;
+
         await _usuarioRepositorio.AtualizarAsync(obtido);
     }
+
     public async Task<LoginResposta> LoginAsync(Login login)
     {
         var usuario = await _usuarioRepositorio.ObterPorEmailAsync(login.Email);
@@ -100,16 +95,30 @@ public class UsuarioAplicacao : IUsuarioAplicacao
 
         var claims = new[]
         {
-        new Claim(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
-        new Claim(ClaimTypes.Name, usuario.Nome),
-        new Claim(ClaimTypes.Email, usuario.Email)
-    };
+            new Claim(
+                ClaimTypes.NameIdentifier,
+                usuario.Id.ToString()
+            ),
+            new Claim(
+                ClaimTypes.Name,
+                usuario.Nome
+            ),
+            new Claim(
+                ClaimTypes.Email,
+                usuario.Email
+            )
+        };
 
         var chave = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(_configuration["Jwt:Key"])
+            Encoding.UTF8.GetBytes(
+                _configuration["Jwt:Key"]
+            )
         );
 
-        var credenciais = new SigningCredentials(chave, SecurityAlgorithms.HmacSha256);
+        var credenciais = new SigningCredentials(
+            chave,
+            SecurityAlgorithms.HmacSha256
+        );
 
         var token = new JwtSecurityToken(
             issuer: _configuration["Jwt:Issuer"],
@@ -121,7 +130,8 @@ public class UsuarioAplicacao : IUsuarioAplicacao
 
         return new LoginResposta
         {
-            Token = new JwtSecurityTokenHandler().WriteToken(token)
+            Token = new JwtSecurityTokenHandler()
+                .WriteToken(token)
         };
     }
 }
