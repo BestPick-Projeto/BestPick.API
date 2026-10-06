@@ -36,6 +36,9 @@ public class UsuarioAplicacao : IUsuarioAplicacao
         if (usuario == null)
             throw new Exception("Usuário obrigatório!");
 
+        if (await _usuarioRepositorio.ObterPorEmailAsync(usuario.Email) != null)
+            throw new Exception("Já existe um usuário com este e-mail.");
+
         var usuarioDominio = new Usuario
         {
             Nome = usuario.Nome,
@@ -45,7 +48,6 @@ public class UsuarioAplicacao : IUsuarioAplicacao
 
         return await _usuarioRepositorio.AdicionarAsync(usuarioDominio);
     }
-
     public async Task<UsuarioRespostaDto> ObterPorIdAsync(int id)
     {
         var obtido = await _usuarioRepositorio.ObterPorIdAsync(id);
@@ -56,9 +58,7 @@ public class UsuarioAplicacao : IUsuarioAplicacao
         return ParaDto(obtido);
     }
 
-    public async Task AtualizarAsync(
-        UsuarioAtualizar usuario,
-        int usuarioId)
+    public async Task AtualizarAsync(UsuarioAtualizar usuario, int usuarioId)
     {
         var obtido = await _usuarioRepositorio.ObterPorIdAsync(usuarioId);
 

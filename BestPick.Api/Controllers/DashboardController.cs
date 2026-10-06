@@ -23,12 +23,9 @@ public class DashboardController : ControllerBase
     {
         try
         {
-            var usuarioId = int.Parse(
-                User.FindFirst(ClaimTypes.NameIdentifier).Value
-            );
+            var usuarioId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
 
-            var resultado =
-                await _dashboardAplicacao.ObterAsync(usuarioId);
+            var resultado = await _dashboardAplicacao.ObterAsync(usuarioId);
 
             return Ok(resultado);
         }
