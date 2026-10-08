@@ -1,5 +1,4 @@
-﻿using BestPick.Repositorio.Queries;
-using Microsoft.EntityFrameworkCore.Migrations;
+﻿using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -9,7 +8,16 @@ namespace BestPick.Repositorio.Migrations
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.Sql(HistoricoQueries.CriarProcedureListarPorUsuario);
+            migrationBuilder.Sql(@"
+                CREATE PROCEDURE sp_ListarHistoricoPorUsuario
+                    @UsuarioId INT
+                AS
+                BEGIN
+                    SELECT * FROM HistoricoBusca
+                    WHERE Ativo = 1 AND UsuarioId = @UsuarioId
+                    ORDER BY DataBusca DESC
+                END
+            ");
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)

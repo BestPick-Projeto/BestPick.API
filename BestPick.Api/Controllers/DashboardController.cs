@@ -12,8 +12,7 @@ public class DashboardController : ControllerBase
 {
     private readonly IDashboardAplicacao _dashboardAplicacao;
 
-    public DashboardController(
-        IDashboardAplicacao dashboardAplicacao)
+    public DashboardController(IDashboardAplicacao dashboardAplicacao)
     {
         _dashboardAplicacao = dashboardAplicacao;
     }

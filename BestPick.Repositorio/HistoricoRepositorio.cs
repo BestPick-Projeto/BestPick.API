@@ -1,7 +1,7 @@
 using BestPick.Repositorio.Interfaces;
 using BestPick.Dominio.Entidades;
 using Microsoft.EntityFrameworkCore;
-using BestPick.Repositorio.Queries;
+using BestPick.Repositorio.Views;
 using Microsoft.Data.SqlClient;
 
 namespace BestPick.Repositorio.Repositorios;
@@ -24,7 +24,7 @@ public class HistoricoRepositorio : IHistoricoRepositorio
         var parametro = new SqlParameter("@UsuarioId", usuarioId);
 
         var obtidos = await contexto.Historicos.FromSqlRaw
-        (HistoricoQueries.ListarPorUsuario, parametro)
+        (HistoricoView.ListarPorUsuario, parametro)
         .ToListAsync();
 
         if (obtidos == null)
