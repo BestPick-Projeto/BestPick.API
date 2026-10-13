@@ -4,7 +4,6 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Net.Http.Headers;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace BestPick.Servicos;
 
@@ -24,12 +23,11 @@ public class ChatService
         _model = configuration["Groq:Model"];
 
         _httpClient.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue(
-                "Bearer",
-                configuration["Groq:ApiKey"]);
+            new AuthenticationHeaderValue("Bearer", configuration["Groq:ApiKey"]);
     }
 
-    public async Task<BestPickChatResposta> EnviarMensagemAsync(string mensagem, string produto = null, decimal? valorCompra = null, string motivoCompra = null)
+    public async Task<BestPickChatResposta> EnviarMensagemAsync(
+        string mensagem, string produto = null, decimal? valorCompra = null, string motivoCompra = null)
     {
         if (string.IsNullOrWhiteSpace(mensagem))
             throw new Exception("A mensagem não pode estar vazia.");
@@ -39,51 +37,26 @@ public class ChatService
         motivoCompra = LimparTexto(motivoCompra);
 
         if (valorCompra <= 0)
-            valorCompra = null; 
-        BestPickChatResposta resultado;
+            valorCompra = null;
 
-        if (produto != null && valorCompra.HasValue && motivoCompra == null)
-        {
-            resultado = new()
-            {
-                Produto = produto,
-                ValorCompra = valorCompra,
-                MotivoCompra = mensagem,
-                Produtos = new()
-            };
-        }
-        else
-        {
-            resultado = await IdentificarDadosAsync(mensagem, produto, valorCompra, motivoCompra);
+        var resultado = await IdentificarDadosAsync(
+            mensagem, produto, valorCompra, motivoCompra);
 
-            resultado.Produto ??= produto;
-            resultado.ValorCompra ??= valorCompra;
-            resultado.MotivoCompra ??= motivoCompra;
-        }
-
-        if (!DadosCompletos(resultado))
-        {
-            resultado.Completo = false;
-            resultado.Produtos = new();
-            resultado.Mensagem = CriarPergunta(resultado);
-
+        if (!resultado.Completo)
             return resultado;
-        }
 
-        resultado.Completo = true;
-
-        var produtos = await _produtoBuscaService.BuscarAsync(resultado.Produto, resultado.ValorCompra.Value);
+        var produtos = await _produtoBuscaService.BuscarAsync(
+            resultado.Produto, resultado.ValorCompra.Value);
 
         if (produtos.Count == 0)
         {
             resultado.Produtos = new();
-            resultado.Mensagem =
-                "Não encontrei produtos dentro do orçamento informado.";
-
+            resultado.Mensagem = "Não encontrei produtos dentro do orçamento informado.";
             return resultado;
         }
 
-        resultado.Produtos = await SelecionarProdutosAsync(produtos, resultado.Produto, resultado.MotivoCompra, resultado.ValorCompra.Value);
+        resultado.Produtos = await SelecionarProdutosAsync(
+            produtos, resultado.Produto, resultado.MotivoCompra, resultado.ValorCompra.Value);
 
         resultado.Mensagem =
             "Encontrei as opções com melhor custo-benefício para o que você procura.";
@@ -91,8 +64,15 @@ public class ChatService
         return resultado;
     }
 
-    private async Task<BestPickChatResposta> IdentificarDadosAsync(string mensagem, string produto, decimal? valorCompra, string motivoCompra)
+    private async Task<BestPickChatResposta> IdentificarDadosAsync(
+    string mensagem, string produto, decimal? valorCompra, string motivoCompra)
     {
+        Console.WriteLine("=== DADOS RECEBIDOS ===");
+        Console.WriteLine($"Mensagem: {mensagem}");
+        Console.WriteLine($"Produto: {produto}");
+        Console.WriteLine($"Valor: {valorCompra}");
+        Console.WriteLine($"Motivo: {motivoCompra}");
+
         string prompt = $@"
 Dados atuais:
 Produto: {produto ?? "não informado"}
@@ -115,14 +95,43 @@ Retorne SOMENTE JSON:
     ""produtos"": []
 }}";
 
-        string resposta = await EnviarGroqAsync("Extraia os dados da compra e retorne somente JSON.",prompt);
+        string resposta = await EnviarGroqAsync(
+            "Extraia os dados da compra e retorne somente JSON.", prompt);
 
-        return JsonConvert.DeserializeObject<BestPickChatResposta>(LimparJson(resposta))
-        ?? throw new Exception(
-                "A IA não retornou uma resposta válida.");
+        Console.WriteLine("=== RESPOSTA DA GROQ ===");
+        Console.WriteLine(resposta);
+
+        var resultado = JsonConvert.DeserializeObject<BestPickChatResposta>(
+            LimparJson(resposta))
+            ?? throw new Exception("A IA não retornou uma resposta válida.");
+
+        resultado.Produto ??= produto;
+        resultado.ValorCompra ??= valorCompra;
+        resultado.MotivoCompra ??= motivoCompra;
+
+        resultado.Completo =
+            !string.IsNullOrWhiteSpace(resultado.Produto) &&
+            resultado.ValorCompra > 0 &&
+            !string.IsNullOrWhiteSpace(resultado.MotivoCompra);
+            
+        resultado.Mensagem = resultado.Completo ? "" :
+            string.IsNullOrWhiteSpace(resultado.Produto) ? "Qual produto você deseja comprar?" :
+            !resultado.ValorCompra.HasValue || resultado.ValorCompra <= 0 ? "Qual o valor da compra?" :
+            "Qual o motivo da compra?";
+
+        resultado.Produtos = new();
+
+        Console.WriteLine("=== RESULTADO FINAL ===");
+        Console.WriteLine($"Produto: {resultado.Produto}");
+        Console.WriteLine($"Valor: {resultado.ValorCompra}");
+        Console.WriteLine($"Motivo: {resultado.MotivoCompra}");
+        Console.WriteLine($"Completo: {resultado.Completo}");
+        Console.WriteLine($"Pergunta: {resultado.Mensagem}");
+
+        return resultado;
     }
-
-    private async Task<List<BestPickProdutoResposta>> SelecionarProdutosAsync(List<ProdutoBuscaResposta> produtos, string produto, string motivoCompra, decimal valorCompra)
+    private async Task<List<BestPickProdutoResposta>> SelecionarProdutosAsync(
+        List<ProdutoBuscaResposta> produtos, string produto, string motivoCompra, decimal valorCompra)
     {
         var candidatos = produtos.Select((p, i) => new
         {
@@ -154,6 +163,7 @@ Não invente características ou desempenho.
 Gere até 3 benefícios em português usando SOMENTE
 informações presentes no nome do produto.
 Não use preço, loja ou avaliações como benefício.
+Se não houver informações suficientes, retorne uma lista vazia de benefícios.
 
 Retorne SOMENTE JSON:
 [
@@ -168,7 +178,6 @@ Retorne SOMENTE JSON:
             prompt);
 
         var escolhidos = JArray.Parse(ExtrairArray(resposta));
-
         var resultado = new List<BestPickProdutoResposta>();
 
         foreach (var escolhido in escolhidos)
@@ -178,12 +187,13 @@ Retorne SOMENTE JSON:
             if (!indice.HasValue ||
                 indice < 0 ||
                 indice >= produtos.Count ||
-                resultado.Any(p =>
-                    p.Nome == produtos[indice.Value].Nome))
+                resultado.Any(p => p.Nome == produtos[indice.Value].Nome))
                 continue;
 
-            resultado.Add(CriarProdutoResposta(produtos[indice.Value], produto, escolhido["beneficios"]
-                    ?.ToObject<List<string>>()));
+            resultado.Add(CriarProdutoResposta(
+                produtos[indice.Value],
+                produto,
+                escolhido["beneficios"]?.ToObject<List<string>>()));
 
             if (resultado.Count == 3)
                 return resultado;
@@ -194,15 +204,15 @@ Retorne SOMENTE JSON:
             if (resultado.Count == 3)
                 break;
 
-            if (!resultado.Any(p =>
-                p.Nome == candidato.Nome))
+            if (!resultado.Any(p => p.Nome == candidato.Nome))
                 resultado.Add(CriarProdutoResposta(candidato, produto, null));
         }
 
         return resultado;
     }
 
-    private BestPickProdutoResposta CriarProdutoResposta(ProdutoBuscaResposta produto, string categoria,List<string> beneficios) =>
+    private BestPickProdutoResposta CriarProdutoResposta(
+        ProdutoBuscaResposta produto, string categoria, List<string> beneficios) =>
         new()
         {
             Nome = produto.Nome,
@@ -210,44 +220,14 @@ Retorne SOMENTE JSON:
             Preco = produto.Preco,
             ImgUrl = produto.ImgUrl,
             Url = produto.Url,
-            Beneficios = beneficios?.Count > 0
-                ? beneficios.Take(3).ToList()
-                : CriarBeneficios(produto.Nome)
+            Beneficios = beneficios?.Take(3).ToList() ?? new()
         };
-
-    private List<string> CriarBeneficios(string nome)
-    {
-        var beneficios = new List<string>();
-
-        var memoria = Regex.Match(nome ?? "",
-            @"(\d+)\s*GB\s*(GDDR\d+)?",
-            RegexOptions.IgnoreCase);
-
-        var modelo = Regex.Match( nome ?? "",
-            @"\b(RTX|GTX|RX)\s*\d+[A-Za-z0-9]*\b",
-            RegexOptions.IgnoreCase);
-
-        if (memoria.Success)
-        {
-            string quantidade = memoria.Groups[1].Value;
-            string tipo = memoria.Groups[2].Value;
-
-            beneficios.Add(string.IsNullOrWhiteSpace(tipo)
-                    ? $"Possui {quantidade}GB de memória."
-                    : $"Possui {quantidade}GB de memória {tipo.ToUpper()}.");
-        }
-
-        if (modelo.Success)beneficios.Add($"Pertence à linha {modelo.Value.ToUpper()}.");
-
-        if (Regex.IsMatch(nome ?? "", @"\bOC\b", RegexOptions.IgnoreCase))
-            beneficios.Add("O modelo possui identificação OC.");
-
-        return beneficios.Take(3).ToList();
-    }
 
     private async Task<string> EnviarGroqAsync(string sistema, string prompt)
     {
-        var requisicao = new ChatRequest(_model, new List<Message>
+        var requisicao = new ChatRequest(
+            _model,
+            new List<Message>
             {
                 new("system", sistema),
                 new("user", prompt)
@@ -260,38 +240,22 @@ Retorne SOMENTE JSON:
             Encoding.UTF8,
             "application/json");
 
-        var resposta =
-            await _httpClient.PostAsync(API_URL, conteudo);
-
+        var resposta = await _httpClient.PostAsync(API_URL, conteudo);
         string corpo = await resposta.Content.ReadAsStringAsync();
 
         if (!resposta.IsSuccessStatusCode)
             throw new Exception($"Erro Groq: {corpo}");
 
-        return JsonConvert
-            .DeserializeObject<ChatResponse>(corpo)
+        return JsonConvert.DeserializeObject<ChatResponse>(corpo)
             ?.Choices?[0]?.Message?.Content
             ?? throw new Exception("A Groq retornou uma resposta vazia.");
     }
 
-    private bool DadosCompletos(BestPickChatResposta resultado) =>
-    !string.IsNullOrWhiteSpace(resultado.Produto) &&
-        !string.IsNullOrWhiteSpace(resultado.MotivoCompra) &&
-        resultado.ValorCompra > 0;
-
-    private string CriarPergunta(BestPickChatResposta resultado) =>
-    string.IsNullOrWhiteSpace(resultado.Produto)
-            ? "Qual produto você deseja comprar?"
-            : !resultado.ValorCompra.HasValue ||
-              resultado.ValorCompra <= 0
-                ? "Qual o valor da compra?"
-                : "Qual o motivo da compra?";
-
     private string LimparJson(string json) => json
-            .Replace("```json", "")
-            .Replace("```JSON", "")
-            .Replace("```", "")
-            .Trim();
+        .Replace("```json", "")
+        .Replace("```JSON", "")
+        .Replace("```", "")
+        .Trim();
 
     private string ExtrairArray(string resposta)
     {
@@ -306,8 +270,8 @@ Retorne SOMENTE JSON:
         return resposta.Substring(inicio, fim - inicio + 1);
     }
 
-    private string LimparTexto(string texto) => string.IsNullOrWhiteSpace(texto) ||
-        texto == "string"
+    private string LimparTexto(string texto) =>
+        string.IsNullOrWhiteSpace(texto) || texto == "string"
             ? null
             : texto;
 }
